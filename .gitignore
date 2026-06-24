@@ -254,3 +254,11 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+/data/**
+
+# Generated outputs — not versioned
+/models/*
+!/models/.gitkeep
+/reports/*
+!/reports/.gitkeep
