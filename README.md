@@ -52,14 +52,14 @@ make streamlit   # Lanza el dashboard interactivo
 
 `train` debe correr antes que `evaluate` y `streamlit`: produce los `.joblib` que ambos consumen.
 
-### Comandos adicionales
+Comandos adicionales
 
 ```bash
 make eda         # Ejecuta los notebooks de exploración
 make clean       # Limpia caché, checkpoints y reportes generados
 ```
 
-### Sin make
+### 3. Manualmente
 
 Con el entorno virtual ya activado (paso 1):
 
