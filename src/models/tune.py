@@ -3,22 +3,38 @@ from sklearn.pipeline import Pipeline
 
 from src.config import CV_FOLDS, RANDOM_STATE
 
+# ---------------------------------------------------------------------------
+# Grids de hiperparámetros
+# ---------------------------------------------------------------------------
+# Nota sobre prefijos:
+#   "preprocessor__"  - paso ColumnTransformer dentro del pipeline
+#   "model__"         - estimador final (LinearRegression, RF, LR)
+#   "smote__"         - SMOTE step en imblearn Pipeline (solo clasificación)
+#
+# El preprocesador raramente se tunea; los grids se enfocan en el modelo.
+
 PARAM_GRIDS: dict[str, dict] = {
-    "regression_linear": {},  # no hyperparameters to tune
+    "regression_linear": {},
+
     "regression_random_forest": {
-        "model__n_estimators": [100, 200],
+        "model__n_estimators": [100, 200, 300],
         "model__max_depth": [None, 10, 20],
         "model__min_samples_split": [2, 5],
         "model__min_samples_leaf": [1, 2],
+        "model__max_features": ["sqrt", "log2"],
     },
+
     "classification_logistic": {
         "model__C": [0.01, 0.1, 1.0, 10.0],
-        "model__solver": ["lbfgs", "saga"],
+        "model__penalty": ["l1", "l2"],
+        "model__solver": ["saga"],
     },
+
     "classification_random_forest": {
-        "model__n_estimators": [100, 200],
+        "model__n_estimators": [100, 200, 300],
         "model__max_depth": [None, 10, 20],
         "model__min_samples_leaf": [1, 2, 4],
+        "model__max_features": ["sqrt", "log2"],
     },
 }
 
@@ -33,12 +49,8 @@ def tune_pipeline(
     n_iter: int = 20,
     scoring: str | None = None,
 ) -> GridSearchCV | RandomizedSearchCV:
-    """Fit a hyperparameter search and return the fitted search object.
-
-    search_type: 'grid' uses GridSearchCV; 'random' uses RandomizedSearchCV.
-    """
     if not param_grid:
-        raise ValueError("param_grid is empty — nothing to tune.")
+        raise ValueError("param_grid está vacío - no hay nada que tunear")
 
     if search_type == "random":
         search = RandomizedSearchCV(
@@ -62,6 +74,6 @@ def tune_pipeline(
         )
 
     search.fit(X_train, y_train)
-    print(f"Best params: {search.best_params_}")
-    print(f"Best CV score: {search.best_score_:.4f}")
+    print(f"Mejores parámetros: {search.best_params_}")
+    print(f"Mejor CV score:     {search.best_score_:.4f}")
     return search

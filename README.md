@@ -1,135 +1,105 @@
 # Factores de Riesgo en Adolescentes — El Salvador (WHO GSHS 2013)
 
-Proyecto de aprendizaje que aplica técnicas de machine learning a datos reales de salud pública: la Encuesta Mundial de Salud Escolar (GSHS) 2013 de El Salvador, conducida por la Organización Mundial de la Salud.
+Proyecto de aprendizaje que aplica machine learning a datos reales de la Encuesta Mundial de Salud Escolar (GSHS) 2013 de El Salvador (OMS). Se construyen dos modelos dentro de un mismo pipeline:
 
-> **Nota:** Este es un proyecto personal con fines educativos. No constituye guía médica ni de política pública oficial.
+- **Regresión** — estima (o intenta estimar) el IMC a partir de hábitos de alimentación y actividad física, sin usar peso ni estatura directamente.
+- **Clasificación** — detecta riesgo grave de salud mental a partir de factores de riesgo y protección.
 
----
-
-## Contexto
-
-La encuesta WHO Global School-based Student Health Survey (GSHS) recopila datos de estudiantes de 13 a 17 años sobre tabaco, alcohol, hábitos alimenticios, actividad física, higiene, salud mental, exposición a violencia y factores protectores. Este proyecto aplica modelos de regresión y clasificación supervisados para identificar patrones y predecir resultados de riesgo.
-
-El conjunto de datos de El Salvador 2013 contiene **1,914 registros** y **102 variables**.
+> Proyecto educativo. No constituye una guía médica (ni está cerca de serla)
 
 ---
 
-## Fuente de Datos y Atribución
+## Datos
 
-| | |
-|---|---|
-| **Dataset** | El Salvador GSHS 2013 |
-| **Fuente** | WHO NCD Microdata Repository |
-| **URL** | https://extranet.who.int/ncdsmicrodata/index.php/catalog/97 |
-| **Incluido en este repo** | **NO** |
+El dataset (`data/SLV2013_Public_Use.csv`) **NO SE INCLUYE** en el repositorio. Para llevar a cabo el análisis, se debe descargar desde [WHO NCD Microdata Repository](https://extranet.who.int/ncdsmicrodata/index.php/catalog/97) y luego colocarlo en `data/`. Su uso está sujeto a los términos de la OMS.
 
-El dataset **no está incluido** en este repositorio. Debe descargarse directamente desde la fuente oficial de la OMS. Consulta [LICENSE](LICENSE) para ver los términos de uso.
+El archivo debe tener por nombre `SLV2013_Public_Use.csv` y estar en la carpeta `data/`.
 
 ---
 
-## Estructura del Proyecto
+## Requisitos
+
+- Python 3.10+
+- El dataset en `data/SLV2013_Public_Use.csv`
+
+---
+
+## Levantar y correr
+
+### 1. Crear y activar el entorno virtual
+
+```bash
+python -m venv venv
+
+# Windows (PowerShell)
+venv\Scripts\Activate.ps1
+# Windows (cmd)
+venv\Scripts\activate.bat
+# Linux / macOS
+source venv/bin/activate
+```
+
+Con el entorno activo, todos los comandos siguientes instalan y corren dentro de `venv`.
+
+### 2. Usando el Makefile
+
+```bash
+make install     # Instala el paquete y dependencias (modo editable)
+make train       # Entrena los 4 modelos y los guarda en models/
+make evaluate    # Genera métricas, matrices de confusión, benchmark y ablación en reports/
+make streamlit   # Lanza el dashboard interactivo
+```
+
+`train` debe correr antes que `evaluate` y `streamlit`: produce los `.joblib` que ambos consumen.
+
+### Comandos adicionales
+
+```bash
+make eda         # Ejecuta los notebooks de exploración
+make clean       # Limpia caché, checkpoints y reportes generados
+```
+
+### Sin make
+
+Con el entorno virtual ya activado (paso 1):
+
+```bash
+pip install -e ".[dev]"
+python -m src.models.train
+python -m src.models.evaluate
+streamlit run src/visualization/app.py
+```
+
+---
+
+## Estructura
 
 ```
-├── LICENSE                   # MIT (código) + disclaimer dataset OMS
-├── Makefile                  # Orquestador del pipeline
-├── pyproject.toml            # Dependencias y configuración del proyecto
-├── README.md
-├── data/
-│   └── SLV2013_Public_Use.csv    # ← Descargar desde la OMS (no incluido)
-├── notebooks/
-│   ├── 01_data_exploration.ipynb
-│   ├── 02_feature_analysis.ipynb
-│   └── 03_model_prototyping.ipynb
-├── src/
-│   ├── config.py             # Columnas, constantes, rutas
-│   ├── data/
-│   │   ├── load.py           # Carga CSV + reemplaza sentinel por NaN
-│   │   ├── clean.py          # Limpieza, outliers, recodificación binaria
-│   │   └── impute.py         # Imputación moda/mediana
-│   ├── features/
-│   │   └── engineer.py       # IMC, scores compuestos de riesgo
-│   ├── models/
-│   │   ├── train.py          # Entrena los 4 modelos con cross-validation
-│   │   ├── evaluate.py       # Métricas, matriz de confusión, importancia
-│   │   └── tune.py           # GridSearchCV / RandomizedSearchCV
-│   ├── analysis/
-│   │   ├── ablation.py       # Experimentos leave-one-feature-group-out
-│   │   └── benchmark.py      # Comparación de modelos
-│   ├── simulation/
-│   │   └── scenarios.py      # Simulador what-if
-│   └── visualization/
-│       ├── plots.py          # Figuras reutilizables (matplotlib/seaborn)
-│       └── app.py            # Dashboard Streamlit (5 páginas)
-├── models/                   # Pipelines entrenados (generado, no versionado)
-└── reports/                  # Métricas JSON + figuras PNG (generado)
+data/        Dataset (no incluido)
+notebooks/   EDA y prototipado (01_data_exploration, 02_feature_analysis)
+src/
+  config.py        Columnas, targets, constantes
+  data/load.py     Carga CSV + limpieza
+  features/        IMC, riesgo de salud mental, scores
+  models/          train, evaluate, tune
+  analysis/        benchmark, ablation
+  simulation/      Simulador de escenarios
+  visualization/   plots reutilizables + dashboard Streamlit
+models/      Pipelines entrenados (generado)
+reports/     Métricas JSON + figuras PNG (generado)
 ```
 
 ---
 
 ## Modelos
 
-### Regresión
-
-| Modelo | Variable objetivo | Notas |
+| Tarea | Modelos | Métrica principal |
 |---|---|---|
-| `LinearRegression` | `Q4` — altura (m) | Línea base |
-| `RandomForestRegressor` | `Q5` — peso (kg) | Captura no linealidades |
-
-Ambos con validación cruzada 5-fold.
-
-### Clasificación
-
-| Modelo | Variable objetivo | Manejo del desbalance |
-|---|---|---|
-| `LogisticRegression` | `qnowtg` — sobrepeso | `class_weight='balanced'` |
-| `RandomForestClassifier` | `qnobeseg` — obesidad | SMOTE (`imblearn.pipeline`) |
-
-> SMOTE se aplica **dentro** del pipeline de CV para evitar fuga de datos.
-
----
-
-## Configuración
-
-### Requisitos
-- Python 3.10+
-- Dataset descargado en `data/SLV2013_Public_Use.csv`
-
-### Instalación
-
-```bash
-pip install -e ".[dev]"
-# o
-make install
-```
-
----
-
-## Uso
-
-```bash
-make data-check   # Verifica que el dataset existe y detecta valores sentinel
-make eda          # Ejecuta y exporta los notebooks de EDA
-make train        # Entrena todos los modelos, guarda en models/
-make evaluate     # Genera métricas, gráficas y reportes en reports/
-make streamlit    # Lanza el dashboard interactivo
-make clean        # Limpia __pycache__, checkpoints y reportes generados
-```
-
----
-
-## Decisiones de Diseño
-
-**Valor sentinel `1.79769313486232e+308`** — Es el máximo del tipo `float64` (IEEE 754), usado por el software WHO GSHS para marcar respuestas no aplicables. Se reemplaza por `NaN` en la carga para evitar que cualquier operación aritmética produzca resultados incorrectos silenciosamente.
-
-**Columnas QN vs Q para clasificación** — Las columnas `QN*` son dicotomizaciones validadas por la OMS usando umbrales de salud establecidos, más robustas que aplicar umbrales ad-hoc a las columnas `Q*`. Las columnas `QN` con >70% de datos faltantes se excluyen explícitamente en `config.py`.
-
-**SMOTE en `imblearn.pipeline`** — Al incluir SMOTE en el pipeline de `imbalanced-learn` (no de scikit-learn), el sobremuestreo ocurre únicamente en los folds de entrenamiento de la CV, evitando la fuga de datos hacia los folds de validación.
-
-**Variables de diseño muestral excluidas** — `weight`, `stratum` y `psu` son variables del diseño muestral complejo. Se conservan en el DataFrame para posible uso futuro con modelos ponderados, pero se excluyen de todas las listas de características.
+| Regresión (IMC) | LinearRegression , RandomForestRegressor | RMSE, R^2 |
+| Clasificación (riesgo de salud mental) | LogisticRegression , RandomForestClassifier + SMOTE | F1 clase minoritaria, AUC-ROC |
 
 ---
 
 ## Licencia
 
-- **Código fuente:** MIT License — ver [LICENSE](LICENSE)
-- **Dataset:** No incluido. Sujeto a los términos de uso de la OMS.
+- **Código:** MIT — ver [LICENSE](LICENSE)

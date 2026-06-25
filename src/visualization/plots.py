@@ -4,10 +4,8 @@ import seaborn as sns
 
 
 def plot_missing_heatmap(df: pd.DataFrame, figsize: tuple = (14, 6)) -> plt.Figure:
-    """Heatmap of null values across all columns (yellow = missing)."""
     fig, ax = plt.subplots(figsize=figsize)
     missing = df.isnull()
-    # Only plot columns with at least some missing data for readability
     cols_with_missing = missing.columns[missing.any()].tolist()
     if not cols_with_missing:
         ax.text(0.5, 0.5, "No missing values", ha="center", va="center")
@@ -21,11 +19,10 @@ def plot_missing_heatmap(df: pd.DataFrame, figsize: tuple = (14, 6)) -> plt.Figu
 
 
 def plot_target_distribution(df: pd.DataFrame, target_col: str) -> plt.Figure:
-    """Bar chart of value counts for a binary (0/1) target column."""
     fig, ax = plt.subplots(figsize=(5, 4))
     counts = df[target_col].value_counts().sort_index()
     ax.bar(counts.index.astype(str), counts.values, color=["#4C72B0", "#DD8452"])
-    ax.set_title(f"Class Distribution — {target_col}")
+    ax.set_title(f"Class Distribution - {target_col}")
     ax.set_xlabel("Class")
     ax.set_ylabel("Count")
     for i, (label, val) in enumerate(zip(counts.index, counts.values)):
@@ -35,7 +32,6 @@ def plot_target_distribution(df: pd.DataFrame, target_col: str) -> plt.Figure:
 
 
 def plot_correlation_matrix(df: pd.DataFrame, cols: list[str]) -> plt.Figure:
-    """Spearman correlation heatmap for the given columns."""
     available = [c for c in cols if c in df.columns]
     corr = df[available].corr(method="spearman")
     fig, ax = plt.subplots(figsize=(max(6, len(available) * 0.5), max(5, len(available) * 0.45)))
@@ -53,7 +49,6 @@ def plot_likert_profiles(
     col_group: list[str],
     title: str = "Response Distributions",
 ) -> plt.Figure:
-    """Stacked bar chart showing response frequency for a group of Likert columns."""
     available = [c for c in col_group if c in df.columns]
     melted = df[available].apply(lambda s: s.value_counts(normalize=True)).T.fillna(0)
     melted = melted.sort_index(axis=1)

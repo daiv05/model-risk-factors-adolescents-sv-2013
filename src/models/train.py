@@ -3,81 +3,118 @@ import numpy as np
 import pandas as pd
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline as ImbPipeline
+from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.model_selection import cross_validate, train_test_split
+from sklearn.model_selection import cross_validate
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from src.config import (
-    CLASSIFICATION_ALL_TARGETS,
+    CLASSIFICATION_CATEGORICAL_COLS,
     CLASSIFICATION_FEATURE_COLS,
-    CLASSIFICATION_TARGET_DEFAULT,
+    CLASSIFICATION_TARGET_MENTAL_HEALTH,
     CV_FOLDS,
     MODELS_DIR,
     RANDOM_STATE,
+    REGRESSION_CATEGORICAL_COLS,
     REGRESSION_FEATURE_COLS,
-    REGRESSION_TARGET_HEIGHT,
-    REGRESSION_TARGET_WEIGHT,
+    REGRESSION_TARGET_BMI,
     TEST_SIZE,
 )
-from src.data.clean import encode_binary_targets
 from src.data.load import load_raw
+from src.features.engineer import add_all_engineered_features
 
 
-def build_regression_pipeline(model_name: str) -> Pipeline:
-    """Build a regression pipeline.
+def _build_preprocessor(feature_cols: list[str], categorical_cols: list[str]) -> ColumnTransformer:
+    """ColumnTransformer con imputer + OHE para categóricas, imputer + scaler para numéricas.
+
+    Usa índices posicionales en lugar de nombres de columna para ser compatible
+    tanto con DataFrame como con arrays numpy (cross_validate clona el pipeline
+    y puede pasar numpy en algunos casos).
+
+    Categóricas (Q1, Q2, Q3): moda - OneHotEncoder (drop='first').
+    Numéricas (Q y QN ordinales): mediana - StandardScaler.
+    """
+    cat_present = [c for c in categorical_cols if c in feature_cols]
+    numeric_cols = [c for c in feature_cols if c not in categorical_cols]
+
+    # Índices posicionales - funcionan con DataFrame y con numpy array
+    cat_idx = [feature_cols.index(c) for c in cat_present]
+    num_idx = [feature_cols.index(c) for c in numeric_cols]
+
+    transformers = []
+    if cat_idx:
+        cat_pipe = Pipeline([
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("ohe", OneHotEncoder(drop="first", handle_unknown="ignore", sparse_output=False)),
+        ])
+        transformers.append(("cat", cat_pipe, cat_idx))
+    if num_idx:
+        num_pipe = Pipeline([
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+        ])
+        transformers.append(("num", num_pipe, num_idx))
+
+    return ColumnTransformer(transformers=transformers, remainder="drop")
+
+
+def build_regression_pipeline(model_name: str, feature_cols: list[str] = None) -> Pipeline:
+    """Pipeline completo: preprocesamiento + modelo de regresión.
 
     model_name: 'linear' | 'random_forest'
     """
+    if feature_cols is None:
+        feature_cols = REGRESSION_FEATURE_COLS
+    preprocessor = _build_preprocessor(feature_cols, REGRESSION_CATEGORICAL_COLS)
+
     if model_name == "linear":
-        return Pipeline([
-            ("scaler", StandardScaler()),
-            ("model", LinearRegression()),
-        ])
+        model = LinearRegression()
     elif model_name == "random_forest":
-        return Pipeline([
-            ("model", RandomForestRegressor(
-                n_estimators=100, random_state=RANDOM_STATE, n_jobs=-1
-            )),
-        ])
-    raise ValueError(f"Unknown regression model: {model_name}")
+        model = RandomForestRegressor(n_estimators=100, random_state=RANDOM_STATE, n_jobs=-1)
+    else:
+        raise ValueError(f"Unknown regression model: {model_name}")
+
+    return Pipeline([("preprocessor", preprocessor), ("model", model)])
 
 
 def build_classification_pipeline(
     model_name: str,
+    feature_cols: list[str] = None,
     use_smote: bool = True,
 ) -> ImbPipeline | Pipeline:
-    """Build a classification pipeline.
+    """Pipeline completo: preprocesamiento + modelo de clasificación.
 
     model_name: 'logistic' | 'random_forest'
-    use_smote: wrap pipeline with SMOTE (applied only inside CV training folds)
+    use_smote: inserta SMOTE antes del modelo usando imblearn.Pipeline para que
+               el sobremuestreo ocurra solo en los folds de entrenamiento (evita data leakage).
     """
+    if feature_cols is None:
+        feature_cols = CLASSIFICATION_FEATURE_COLS
+    preprocessor = _build_preprocessor(feature_cols, CLASSIFICATION_CATEGORICAL_COLS)
+
     if model_name == "logistic":
-        steps = [
-            ("scaler", StandardScaler()),
-            ("model", LogisticRegression(
-                class_weight="balanced",
-                max_iter=1000,
-                random_state=RANDOM_STATE,
-            )),
-        ]
+        model = LogisticRegression(
+            class_weight="balanced", max_iter=1000, random_state=RANDOM_STATE
+        )
     elif model_name == "random_forest":
-        steps = [
-            ("model", RandomForestClassifier(
-                class_weight="balanced",
-                n_estimators=100,
-                random_state=RANDOM_STATE,
-                n_jobs=-1,
-            )),
-        ]
+        model = RandomForestClassifier(
+            class_weight="balanced", n_estimators=100,
+            random_state=RANDOM_STATE, n_jobs=-1,
+        )
     else:
         raise ValueError(f"Unknown classification model: {model_name}")
 
     if use_smote:
-        # imblearn Pipeline ensures SMOTE runs only on training folds
-        return ImbPipeline([("smote", SMOTE(random_state=RANDOM_STATE))] + steps)
-    return Pipeline(steps)
+        # imblearn Pipeline garantiza que SMOTE solo aplica en folds de entrenamiento
+        return ImbPipeline([
+            ("preprocessor", preprocessor),
+            ("smote", SMOTE(random_state=RANDOM_STATE)),
+            ("model", model),
+        ])
+    return Pipeline([("preprocessor", preprocessor), ("model", model)])
 
 
 def cross_validate_model(
@@ -87,7 +124,7 @@ def cross_validate_model(
     cv: int = CV_FOLDS,
     scoring=None,
 ) -> dict:
-    """Run cross_validate and return mean/std of train and test scores."""
+    """Ejecuta cross_validate y devuelve media y desviación estándar de cada métrica."""
     results = cross_validate(
         pipeline, X, y, cv=cv, scoring=scoring,
         return_train_score=True, n_jobs=-1,
@@ -100,79 +137,110 @@ def cross_validate_model(
     return summary
 
 
-def train_all_regression_models(df: pd.DataFrame) -> dict[str, Pipeline]:
-    """Train LinearRegression and RandomForestRegressor. Returns fitted pipelines."""
+def train_bmi_models(df: pd.DataFrame) -> dict[str, Pipeline]:
+    """Entrena modelos de regresión para predecir IMC.
+
+    Features: hábitos de alimentación y actividad física (sin Q4/Q5).
+    Target: 'bmi' (debe estar en df, generado por add_all_engineered_features).
+    El preprocesamiento (imputer, OHE, scaler) queda encapsulado dentro del pipeline.
+    """
+    if REGRESSION_TARGET_BMI not in df.columns:
+        raise ValueError(
+            f"Target '{REGRESSION_TARGET_BMI}' no encontrado. "
+            "Ejecuta add_all_engineered_features(df) antes."
+        )
+
+    available_features = [c for c in REGRESSION_FEATURE_COLS if c in df.columns]
+    X = df[available_features]
+    y = df[REGRESSION_TARGET_BMI]
+
+    # Eliminamos filas donde el target es NaN; los NaN en features los maneja el pipeline
+    mask = y.notna()
+    X, y = X[mask], y[mask]
+
+    print(f"\nRegresión - target: {REGRESSION_TARGET_BMI}")
+    print(f"  Muestras: {len(y)}  |  IMC: min={y.min():.1f}, media={y.mean():.1f}, max={y.max():.1f}")
+
     fitted = {}
-    for target_name, target_col in [
-        ("height", REGRESSION_TARGET_HEIGHT),
-        ("weight", REGRESSION_TARGET_WEIGHT),
-    ]:
-        available_features = [c for c in REGRESSION_FEATURE_COLS if c in df.columns]
-        available_target = target_col if target_col in df.columns else None
-        if available_target is None:
-            print(f"Target {target_col} not found, skipping.")
-            continue
-
-        subset = df[available_features + [available_target]].dropna()
-        X = subset[available_features]
-        y = subset[available_target]
-
-        for model_name in ["linear", "random_forest"]:
-            key = f"regression_{model_name}_{target_name}"
-            print(f"\nTraining {key} ...")
-            pipeline = build_regression_pipeline(model_name)
-            cv_scores = cross_validate_model(
-                pipeline, X, y, scoring=["r2", "neg_mean_absolute_error"]
-            )
-            print(f"  CV R2: {cv_scores.get('test_r2_mean', 'n/a'):.4f}")
-            pipeline.fit(X, y)
-            fitted[key] = pipeline
-            joblib.dump(pipeline, MODELS_DIR / f"{key}.joblib")
-            print(f"  Saved to models/{key}.joblib")
+    for model_name in ["linear", "random_forest"]:
+        key = f"regression_{model_name}_bmi"
+        print(f"\n  Entrenando {key} ...")
+        pipeline = build_regression_pipeline(model_name, available_features)
+        cv_scores = cross_validate_model(
+            pipeline, X, y, scoring=["r2", "neg_mean_absolute_error", "neg_root_mean_squared_error"]
+        )
+        print(f"    CV R²:   {cv_scores.get('test_r2_mean', float('nan')):.4f} "
+              f"± {cv_scores.get('test_r2_std', float('nan')):.4f}")
+        print(f"    CV MAE:  {-cv_scores.get('test_neg_mean_absolute_error_mean', float('nan')):.4f}")
+        print(f"    CV RMSE: {-cv_scores.get('test_neg_root_mean_squared_error_mean', float('nan')):.4f}")
+        pipeline.fit(X, y)
+        fitted[key] = pipeline
+        joblib.dump(pipeline, MODELS_DIR / f"{key}.joblib")
+        print(f"    Guardado - models/{key}.joblib")
 
     return fitted
 
 
-def train_all_classification_models(
-    df: pd.DataFrame,
-    target_col: str = CLASSIFICATION_TARGET_DEFAULT,
-) -> dict[str, Pipeline]:
-    """Train LogisticRegression and RandomForestClassifier for a binary target."""
-    available_features = [c for c in CLASSIFICATION_FEATURE_COLS if c in df.columns]
-    df = encode_binary_targets(df, [target_col])
+def train_mental_health_models(df: pd.DataFrame) -> dict[str, Pipeline]:
+    """Entrena modelos de clasificación para predecir riesgo de salud mental.
 
+    Features: factores de riesgo y protección psicosocial (columnas QN + demográficas Q1-Q3).
+    Target: 'mental_health_risk' (debe estar en df, generado por add_all_engineered_features).
+    Las columnas QN están en escala OMS (1=Sí, 2=No); el modelo aprende directamente
+    de estos valores - no se recodifican porque la información cardinal (1 vs 2) es útil.
+    El desbalance se maneja con class_weight='balanced' + SMOTE.
+    """
+    target_col = CLASSIFICATION_TARGET_MENTAL_HEALTH
     if target_col not in df.columns:
-        raise ValueError(f"Target column '{target_col}' not in DataFrame.")
+        raise ValueError(
+            f"Target '{target_col}' no encontrado. "
+            "Ejecuta add_all_engineered_features(df) antes."
+        )
 
-    subset = df[available_features + [target_col]].dropna()
-    X = subset[available_features]
-    y = subset[target_col]
+    available_features = [c for c in CLASSIFICATION_FEATURE_COLS if c in df.columns]
+    X = df[available_features]
+    y = df[target_col]
+
+    mask = y.notna()
+    X, y = X[mask], y[mask]
+
+    class_counts = y.value_counts().sort_index()
+    ratio = class_counts.max() / class_counts.min()
+    print(f"\nClasificación - target: {target_col}")
+    print(f"  Muestras: {len(y)}  |  Clases: {class_counts.to_dict()}  |  Ratio: {ratio:.1f}:1")
 
     fitted = {}
     for model_name in ["logistic", "random_forest"]:
         key = f"classification_{model_name}_{target_col}"
-        print(f"\nTraining {key} ...")
-        pipeline = build_classification_pipeline(model_name, use_smote=True)
+        print(f"\n  Entrenando {key} ...")
+        pipeline = build_classification_pipeline(model_name, available_features, use_smote=True)
         cv_scores = cross_validate_model(
-            pipeline, X, y, scoring=["f1", "roc_auc"]
+            pipeline, X, y, scoring=["f1", "roc_auc", "balanced_accuracy"]
         )
-        print(f"  CV F1:      {cv_scores.get('test_f1_mean', 'n/a'):.4f}")
-        print(f"  CV ROC-AUC: {cv_scores.get('test_roc_auc_mean', 'n/a'):.4f}")
+        print(f"    CV F1:                {cv_scores.get('test_f1_mean', float('nan')):.4f} "
+              f"± {cv_scores.get('test_f1_std', float('nan')):.4f}")
+        print(f"    CV ROC-AUC:           {cv_scores.get('test_roc_auc_mean', float('nan')):.4f} "
+              f"± {cv_scores.get('test_roc_auc_std', float('nan')):.4f}")
+        print(f"    CV Balanced Accuracy: {cv_scores.get('test_balanced_accuracy_mean', float('nan')):.4f}")
         pipeline.fit(X, y)
         fitted[key] = pipeline
         joblib.dump(pipeline, MODELS_DIR / f"{key}.joblib")
-        print(f"  Saved to models/{key}.joblib")
+        print(f"    Guardado - models/{key}.joblib")
 
     return fitted
 
 
 def main():
-    print("Loading data...")
+    print("Cargando datos...")
     df = load_raw()
     print(f"  Shape: {df.shape}")
-    train_all_regression_models(df)
-    train_all_classification_models(df)
-    print("\nAll models trained and saved.")
+
+    print("\nCalculando features derivadas (IMC, mental_health_risk, scores)...")
+    df = add_all_engineered_features(df)
+
+    train_bmi_models(df)
+    train_mental_health_models(df)
+    print("\nTodos los modelos entrenados y guardados.")
 
 
 if __name__ == "__main__":

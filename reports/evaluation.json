@@ -1,0 +1,30 @@
+{
+  "regression_linear_bmi": {
+    "mae": 2.9135,
+    "rmse": 3.8332,
+    "r2": 0.0272
+  },
+  "regression_random_forest_bmi": {
+    "mae": 1.1596,
+    "rmse": 1.5097,
+    "r2": 0.8491
+  },
+  "classification_logistic_mental_health_risk": {
+    "target": "classification_logistic_mental_health_risk",
+    "accuracy": 0.8486,
+    "f1_minority_class": 0.5246,
+    "f1_weighted": 0.8637,
+    "precision_weighted": 0.8903,
+    "recall_weighted": 0.8486,
+    "roc_auc": 0.8674
+  },
+  "classification_random_forest_mental_health_risk": {
+    "target": "classification_random_forest_mental_health_risk",
+    "accuracy": 0.9948,
+    "f1_minority_class": 0.9778,
+    "f1_weighted": 0.9947,
+    "precision_weighted": 0.9948,
+    "recall_weighted": 0.9948,
+    "roc_auc": 0.9997
+  }
+}

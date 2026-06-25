@@ -13,7 +13,6 @@ ipython_config.py
 #   git rm -r .ipynb_checkpoints/
 
 ### Linux ###
-*~
 
 # temporary files which can be created if a process still has a handle open of a deleted file
 .fuse_hidden*
@@ -256,9 +255,3 @@ $RECYCLE.BIN/
 *.lnk
 
 /data/**
-
-# Generated outputs — not versioned
-/models/*
-!/models/.gitkeep
-/reports/*
-!/reports/.gitkeep

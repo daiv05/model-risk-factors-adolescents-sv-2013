@@ -3,7 +3,7 @@ from sklearn.pipeline import Pipeline
 
 
 def build_scenario(base_row: pd.Series, changes: dict) -> pd.Series:
-    """Return a copy of base_row with the specified column values replaced."""
+    """Devuelve una copia de base_row con los valores de columna especificados reemplazados."""
     row = base_row.copy()
     for col, value in changes.items():
         row[col] = value
@@ -11,15 +11,16 @@ def build_scenario(base_row: pd.Series, changes: dict) -> pd.Series:
 
 
 def predict_scenario(
-    pipeline: Pipeline,
+    pipeline,
     base_row: pd.Series,
     feature_cols: list[str],
     scenarios: list[dict],
     predict_proba: bool = False,
 ) -> pd.DataFrame:
-    """For each scenario dict, build a modified row and predict.
+    """Para cada escenario, construye una fila modificada y predice.
 
-    Returns a DataFrame with columns: scenario, prediction (and probability if applicable).
+    Devuelve un DataFrame con columnas: scenario, prediction (y probability si aplica).
+    El índice 0 es siempre el baseline (fila original sin cambios).
     """
     rows_to_predict = [base_row[feature_cols]]
     scenario_labels = ["baseline"]
@@ -43,24 +44,35 @@ def predict_scenario(
 
 
 def run_sample_scenarios(df: pd.DataFrame, pipelines: dict, feature_cols: list[str]):
-    """Demo: effect of changing Q7 (physical activity days) on overweight prediction."""
+    """Demo: efecto de cambiar factores de protección/riesgo sobre la predicción de salud mental.
+
+    Simula tres perfiles contrastantes:
+      1. Perfil de riesgo alto: soledad frecuente, sin apoyo parental, consumo de alcohol
+      2. Perfil neutro: valores medios
+      3. Perfil protegido: apoyo parental alto, sin consumo de sustancias, sin soledad
+
+    Escala OMS: 1=Sí, 2=No para columnas QN.
+    """
     target_key = next((k for k in pipelines if "classification" in k), None)
     if target_key is None:
-        print("No classification pipeline found.")
+        print("No se encontró pipeline de clasificación.")
         return
 
     pipeline = pipelines[target_key]
     base_row = df[feature_cols].dropna().iloc[0]
 
     scenarios = [
-        {"Q7": 1},   # sedentary (1 day active per week)
-        {"Q7": 4},   # moderately active
-        {"Q7": 7},   # fully active (7 days per week)
+        # Riesgo alto: solo, sin dormir bien, con alcohol, sin apoyo familiar
+        {"QN22": 1, "QN23": 1, "QN35": 1, "QN54": 2, "QN55": 2, "QN56": 2, "QN57": 2},
+        # Neutro: no solo, algo de apoyo
+        {"QN22": 2, "QN23": 2, "QN35": 2, "QN54": 1, "QN55": 2, "QN56": 2, "QN57": 2},
+        # Protegido: apoyo familiar completo, sin factores de riesgo
+        {"QN22": 2, "QN23": 2, "QN35": 2, "QN54": 1, "QN55": 1, "QN56": 1, "QN57": 1},
     ]
 
     results = predict_scenario(
         pipeline, base_row, feature_cols, scenarios, predict_proba=True
     )
-    print(f"\nScenario simulation for pipeline: {target_key}")
+    print(f"\nSimulación de escenarios para: {target_key}")
     print(results.to_string(index=False))
     return results
