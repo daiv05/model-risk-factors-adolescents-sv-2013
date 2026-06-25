@@ -1,9 +1,9 @@
-# Factores de Riesgo en Adolescentes — El Salvador (WHO GSHS 2013)
+# Factores de Riesgo en Adolescentes - El Salvador (WHO GSHS 2013)
 
 Proyecto de aprendizaje que aplica machine learning a datos reales de la Encuesta Mundial de Salud Escolar (GSHS) 2013 de El Salvador (OMS). Se construyen dos modelos dentro de un mismo pipeline:
 
-- **Regresión** — estima (o intenta estimar) el IMC a partir de hábitos de alimentación y actividad física, sin usar peso ni estatura directamente.
-- **Clasificación** — detecta riesgo grave de salud mental a partir de factores de riesgo y protección.
+- **Regresión** - estima (o intenta estimar) el IMC a partir de hábitos de alimentación y actividad física, sin usar peso ni estatura directamente.
+- **Clasificación** - detecta riesgo grave de salud mental a partir de factores de riesgo y protección.
 
 > Proyecto educativo. No constituye una guía médica (ni está cerca de serla)
 
@@ -102,4 +102,4 @@ reports/     Métricas JSON + figuras PNG (generado)
 
 ## Licencia
 
-- **Código:** MIT — ver [LICENSE](LICENSE)
+- **Código:** MIT - ver [LICENSE](LICENSE)
