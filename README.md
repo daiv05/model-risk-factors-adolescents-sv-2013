@@ -11,9 +11,9 @@ Proyecto de aprendizaje que aplica machine learning a datos reales de la Encuest
 
 ## Datos
 
-El dataset (`data/SLV2013_Public_Use.csv`) **NO SE INCLUYE** en el repositorio. Para llevar a cabo el análisis, se debe descargar desde [WHO NCD Microdata Repository](https://extranet.who.int/ncdsmicrodata/index.php/catalog/97) y luego colocarlo en `data/`. Su uso está sujeto a los términos de la OMS.
+El dataset (`data/SLV2013_Public_Use.csv`) **NO SE INCLUYE** en el repositorio. Para llevar a cabo el análisis, se debe descargar desde [WHO NCD Microdata Repository](https://extranet.who.int/ncdsmicrodata/index.php/catalog/97/get-microdata) y luego colocarlo en `data/`. Su uso está sujeto a los términos de la OMS.
 
-El archivo debe tener por nombre `SLV2013_Public_Use.csv` y estar en la carpeta `data/`.
+El archivo debe tener por nombre `SLV2013_Public_Use.csv`.
 
 ---
 
