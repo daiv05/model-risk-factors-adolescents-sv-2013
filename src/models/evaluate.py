@@ -45,8 +45,8 @@ def classification_report_extended(
     except Exception:
         roc_auc = None
 
-    # F1 de la clase minoritaria (clase 1 = en riesgo)
-    f1_minority = round(report.get("1", {}).get("f1-score", float("nan")), 4)
+    cls1 = report.get("1") or report.get("1.0") or {}
+    f1_minority = round(cls1.get("f1-score", float("nan")), 4)
 
     return {
         "target": target_name,
@@ -241,9 +241,10 @@ def main():
     available_cls = [c for c in CLASSIFICATION_FEATURE_COLS if c in df.columns]
     mask = df[target_col].notna()
     X_cls = df.loc[mask, available_cls]
-    y_cls = df.loc[mask, target_col]
+    y_cls = df.loc[mask, target_col].astype(int)
+    # Mismo split que train.py (estratificado, mismo RANDOM_STATE) - test no visto
     _, X_test_cls, _, y_test_cls = train_test_split(
-        X_cls, y_cls, test_size=TEST_SIZE, random_state=RANDOM_STATE
+        X_cls, y_cls, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y_cls
     )
 
     for model_name in ["logistic", "random_forest"]:

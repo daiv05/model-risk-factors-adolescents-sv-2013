@@ -1,30 +1,30 @@
 {
   "regression_linear_bmi": {
-    "mae": 2.9135,
-    "rmse": 3.8332,
-    "r2": 0.0272
+    "mae": 2.9541,
+    "rmse": 3.8921,
+    "r2": -0.0029
   },
   "regression_random_forest_bmi": {
-    "mae": 1.1596,
-    "rmse": 1.5097,
-    "r2": 0.8491
+    "mae": 3.1874,
+    "rmse": 4.0777,
+    "r2": -0.1008
   },
   "classification_logistic_mental_health_risk": {
     "target": "classification_logistic_mental_health_risk",
-    "accuracy": 0.8486,
-    "f1_minority_class": 0.5246,
-    "f1_weighted": 0.8637,
-    "precision_weighted": 0.8903,
-    "recall_weighted": 0.8486,
-    "roc_auc": 0.8674
+    "accuracy": 0.7598,
+    "f1_minority_class": 0.5577,
+    "f1_weighted": 0.7793,
+    "precision_weighted": 0.8277,
+    "recall_weighted": 0.7598,
+    "roc_auc": 0.7898
   },
   "classification_random_forest_mental_health_risk": {
     "target": "classification_random_forest_mental_health_risk",
-    "accuracy": 0.9948,
-    "f1_minority_class": 0.9778,
-    "f1_weighted": 0.9947,
-    "precision_weighted": 0.9948,
-    "recall_weighted": 0.9948,
-    "roc_auc": 0.9997
+    "accuracy": 0.8198,
+    "f1_minority_class": 0.4,
+    "f1_weighted": 0.7947,
+    "precision_weighted": 0.7956,
+    "recall_weighted": 0.8198,
+    "roc_auc": 0.7562
   }
 }

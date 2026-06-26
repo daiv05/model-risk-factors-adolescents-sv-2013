@@ -7,7 +7,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.model_selection import cross_validate
+from sklearn.model_selection import cross_validate, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
@@ -154,12 +154,16 @@ def train_bmi_models(df: pd.DataFrame) -> dict[str, Pipeline]:
     X = df[available_features]
     y = df[REGRESSION_TARGET_BMI]
 
-    # Eliminamos filas donde el target es NaN; los NaN en features los maneja el pipeline
     mask = y.notna()
     X, y = X[mask], y[mask]
 
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE
+    )
+
     print(f"\nRegresión - target: {REGRESSION_TARGET_BMI}")
-    print(f"  Muestras: {len(y)}  |  IMC: min={y.min():.1f}, media={y.mean():.1f}, max={y.max():.1f}")
+    print(f"  Muestras: {len(y)} (train={len(y_train)}, test={len(y_test)})")
+    print(f"  IMC: min={y.min():.1f}, media={y.mean():.1f}, max={y.max():.1f}")
 
     fitted = {}
     for model_name in ["linear", "random_forest"]:
@@ -167,13 +171,14 @@ def train_bmi_models(df: pd.DataFrame) -> dict[str, Pipeline]:
         print(f"\n  Entrenando {key} ...")
         pipeline = build_regression_pipeline(model_name, available_features)
         cv_scores = cross_validate_model(
-            pipeline, X, y, scoring=["r2", "neg_mean_absolute_error", "neg_root_mean_squared_error"]
+            pipeline, X_train, y_train,
+            scoring=["r2", "neg_mean_absolute_error", "neg_root_mean_squared_error"]
         )
         print(f"    CV R²:   {cv_scores.get('test_r2_mean', float('nan')):.4f} "
               f"± {cv_scores.get('test_r2_std', float('nan')):.4f}")
         print(f"    CV MAE:  {-cv_scores.get('test_neg_mean_absolute_error_mean', float('nan')):.4f}")
         print(f"    CV RMSE: {-cv_scores.get('test_neg_root_mean_squared_error_mean', float('nan')):.4f}")
-        pipeline.fit(X, y)
+        pipeline.fit(X_train, y_train)
         fitted[key] = pipeline
         joblib.dump(pipeline, MODELS_DIR / f"{key}.joblib")
         print(f"    Guardado - models/{key}.joblib")
@@ -202,12 +207,17 @@ def train_mental_health_models(df: pd.DataFrame) -> dict[str, Pipeline]:
     y = df[target_col]
 
     mask = y.notna()
-    X, y = X[mask], y[mask]
+    X, y = X[mask], y[mask].astype(int)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
+    )
 
     class_counts = y.value_counts().sort_index()
     ratio = class_counts.max() / class_counts.min()
     print(f"\nClasificación - target: {target_col}")
-    print(f"  Muestras: {len(y)}  |  Clases: {class_counts.to_dict()}  |  Ratio: {ratio:.1f}:1")
+    print(f"  Muestras: {len(y)} (train={len(y_train)}, test={len(y_test)})")
+    print(f"  Clases: {class_counts.to_dict()}  |  Ratio: {ratio:.1f}:1")
 
     fitted = {}
     for model_name in ["logistic", "random_forest"]:
@@ -215,14 +225,14 @@ def train_mental_health_models(df: pd.DataFrame) -> dict[str, Pipeline]:
         print(f"\n  Entrenando {key} ...")
         pipeline = build_classification_pipeline(model_name, available_features, use_smote=True)
         cv_scores = cross_validate_model(
-            pipeline, X, y, scoring=["f1", "roc_auc", "balanced_accuracy"]
+            pipeline, X_train, y_train, scoring=["f1", "roc_auc", "balanced_accuracy"]
         )
         print(f"    CV F1:                {cv_scores.get('test_f1_mean', float('nan')):.4f} "
               f"± {cv_scores.get('test_f1_std', float('nan')):.4f}")
         print(f"    CV ROC-AUC:           {cv_scores.get('test_roc_auc_mean', float('nan')):.4f} "
               f"± {cv_scores.get('test_roc_auc_std', float('nan')):.4f}")
         print(f"    CV Balanced Accuracy: {cv_scores.get('test_balanced_accuracy_mean', float('nan')):.4f}")
-        pipeline.fit(X, y)
+        pipeline.fit(X_train, y_train)
         fitted[key] = pipeline
         joblib.dump(pipeline, MODELS_DIR / f"{key}.joblib")
         print(f"    Guardado - models/{key}.joblib")

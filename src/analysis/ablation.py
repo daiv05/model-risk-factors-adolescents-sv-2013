@@ -36,12 +36,12 @@ def leave_one_group_out(
         feature_cols = CLASSIFICATION_FEATURE_COLS
 
     available_features = [c for c in feature_cols if c in df.columns]
-    subset = df[available_features + [target_col]].dropna()
+    subset = df[df[target_col].notna()]
     X_full = subset[available_features]
-    y = subset[target_col]
+    y = subset[target_col].astype(int)
 
     baseline_pipeline = build_classification_pipeline(model_name, available_features, use_smote=True)
-    baseline_scores = cross_validate_model(baseline_pipeline, X_full, y, scoring=scoring)
+    baseline_scores = cross_validate_model(baseline_pipeline, X_full, y, scoring=[scoring])
     baseline = baseline_scores.get(f"test_{scoring}_mean", float("nan"))
     print(f"Baseline {scoring}: {baseline:.4f}")
 
@@ -53,7 +53,7 @@ def leave_one_group_out(
             continue
         X_reduced = subset[reduced_features]
         pipeline = build_classification_pipeline(model_name, reduced_features, use_smote=True)
-        scores = cross_validate_model(pipeline, X_reduced, y, scoring=scoring)
+        scores = cross_validate_model(pipeline, X_reduced, y, scoring=[scoring])
         score = scores.get(f"test_{scoring}_mean", float("nan"))
         delta = score - baseline
         rows.append({
