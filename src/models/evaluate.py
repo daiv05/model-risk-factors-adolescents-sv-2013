@@ -47,11 +47,15 @@ def classification_report_extended(
 
     cls1 = report.get("1") or report.get("1.0") or {}
     f1_minority = round(cls1.get("f1-score", float("nan")), 4)
+    precision_minority = round(cls1.get("precision", float("nan")), 4)
+    recall_minority = round(cls1.get("recall", float("nan")), 4)
 
     return {
         "target": target_name,
         "accuracy": round(report["accuracy"], 4),
         "f1_minority_class": f1_minority,
+        "precision_minority_class": precision_minority,
+        "recall_minority_class": recall_minority,
         "f1_weighted": round(report["weighted avg"]["f1-score"], 4),
         "precision_weighted": round(report["weighted avg"]["precision"], 4),
         "recall_weighted": round(report["weighted avg"]["recall"], 4),
@@ -117,8 +121,6 @@ def _extract_feature_importances(pipeline, feature_names: list[str]):
                 readable.append(raw)
                 continue
             transformer_name, rest = parts
-            # rest es como "x0_2" o "x0"
-            idx_part = rest.split("_")[1] if "_" in rest else rest.lstrip("x")
             try:
                 feat_idx = int(rest.lstrip("x").split("_")[0])
             except (ValueError, IndexError):

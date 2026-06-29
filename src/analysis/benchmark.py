@@ -23,9 +23,9 @@ def benchmark_all_models(df: pd.DataFrame) -> pd.DataFrame:
     # --- Regresión: IMC ---
     available_features = [c for c in REGRESSION_FEATURE_COLS if c in df.columns]
     if REGRESSION_TARGET_BMI in df.columns:
-        subset = df[available_features + [REGRESSION_TARGET_BMI]].dropna()
-        X = subset[available_features]
-        y = subset[REGRESSION_TARGET_BMI]
+        mask = df[REGRESSION_TARGET_BMI].notna()
+        X = df.loc[mask, available_features]
+        y = df.loc[mask, REGRESSION_TARGET_BMI]
 
         for model_name in ["linear", "random_forest"]:
             pipeline = build_regression_pipeline(model_name, available_features)
@@ -57,9 +57,9 @@ def benchmark_all_models(df: pd.DataFrame) -> pd.DataFrame:
     target_col = CLASSIFICATION_TARGET_MENTAL_HEALTH
     if target_col in df.columns:
         available_features = [c for c in CLASSIFICATION_FEATURE_COLS if c in df.columns]
-        subset = df[available_features + [target_col]].dropna()
-        X = subset[available_features]
-        y = subset[target_col]
+        mask = df[target_col].notna()
+        X = df.loc[mask, available_features]
+        y = df.loc[mask, target_col]
 
         for model_name in ["logistic", "random_forest"]:
             pipeline = build_classification_pipeline(model_name, available_features, use_smote=True)

@@ -26,8 +26,7 @@ PARAM_GRIDS: dict[str, dict] = {
 
     "classification_logistic": {
         "model__C": [0.01, 0.1, 1.0, 10.0],
-        "model__penalty": ["l1", "l2"],
-        "model__solver": ["saga"],
+        "model__l1_ratio": [0.0, 0.5, 1.0],
     },
 
     "classification_random_forest": {

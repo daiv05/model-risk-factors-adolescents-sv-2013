@@ -261,3 +261,6 @@ $RECYCLE.BIN/
 **.aux
 **.dvi
 **.out
+**.fdb_latexmk
+**.fls
+**.synctex.gz

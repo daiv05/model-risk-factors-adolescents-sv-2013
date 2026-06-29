@@ -41,8 +41,10 @@ def compute_mental_health_risk(df: pd.DataFrame) -> pd.DataFrame:
     sub = df[available]
     any_yes = (sub == 1).any(axis=1)
     all_na = sub.isna().all(axis=1)
+    has_any_na = sub.isna().any(axis=1)
     risk = any_yes.astype("float")
     risk[all_na] = np.nan
+    risk[(~any_yes) & has_any_na] = np.nan
     df["mental_health_risk"] = risk
     return df
 

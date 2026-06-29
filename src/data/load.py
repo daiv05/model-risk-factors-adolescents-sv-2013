@@ -2,12 +2,12 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from src.config import DATA_PATH, SENTINEL_VALUE
+from src.config import DATA_PATH
 
 
 def load_raw(path: Path = DATA_PATH) -> pd.DataFrame:
     df = pd.read_csv(path)
-    df.replace(SENTINEL_VALUE, np.nan, inplace=True)
+    df[df >= np.finfo(np.float64).max] = np.nan
     return df
 
 

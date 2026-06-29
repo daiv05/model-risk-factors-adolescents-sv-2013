@@ -25,6 +25,7 @@ from src.config import (
 )
 from src.data.load import load_raw
 from src.features.engineer import add_all_engineered_features
+from src.models.tune import PARAM_GRIDS, tune_pipeline
 
 
 def _build_preprocessor(feature_cols: list[str], categorical_cols: list[str]) -> ColumnTransformer:
@@ -97,7 +98,8 @@ def build_classification_pipeline(
 
     if model_name == "logistic":
         model = LogisticRegression(
-            class_weight="balanced", max_iter=1000, random_state=RANDOM_STATE
+            class_weight="balanced", max_iter=1000, solver="saga",
+            random_state=RANDOM_STATE,
         )
     elif model_name == "random_forest":
         model = RandomForestClassifier(
@@ -168,17 +170,29 @@ def train_bmi_models(df: pd.DataFrame) -> dict[str, Pipeline]:
     fitted = {}
     for model_name in ["linear", "random_forest"]:
         key = f"regression_{model_name}_bmi"
+        grid_key = f"regression_{model_name}"
         print(f"\n  Entrenando {key} ...")
         pipeline = build_regression_pipeline(model_name, available_features)
-        cv_scores = cross_validate_model(
-            pipeline, X_train, y_train,
-            scoring=["r2", "neg_mean_absolute_error", "neg_root_mean_squared_error"]
-        )
-        print(f"    CV R²:   {cv_scores.get('test_r2_mean', float('nan')):.4f} "
-              f"± {cv_scores.get('test_r2_std', float('nan')):.4f}")
-        print(f"    CV MAE:  {-cv_scores.get('test_neg_mean_absolute_error_mean', float('nan')):.4f}")
-        print(f"    CV RMSE: {-cv_scores.get('test_neg_root_mean_squared_error_mean', float('nan')):.4f}")
-        pipeline.fit(X_train, y_train)
+
+        param_grid = PARAM_GRIDS.get(grid_key, {})
+        if param_grid:
+            print(f"    Tuning hiperparámetros ({len(param_grid)} params)...")
+            search = tune_pipeline(
+                pipeline, param_grid, X_train, y_train,
+                search_type="grid", scoring="neg_mean_absolute_error",
+            )
+            pipeline = search.best_estimator_
+        else:
+            cv_scores = cross_validate_model(
+                pipeline, X_train, y_train,
+                scoring=["r2", "neg_mean_absolute_error", "neg_root_mean_squared_error"]
+            )
+            print(f"    CV R²:   {cv_scores.get('test_r2_mean', float('nan')):.4f} "
+                  f"± {cv_scores.get('test_r2_std', float('nan')):.4f}")
+            print(f"    CV MAE:  {-cv_scores.get('test_neg_mean_absolute_error_mean', float('nan')):.4f}")
+            print(f"    CV RMSE: {-cv_scores.get('test_neg_root_mean_squared_error_mean', float('nan')):.4f}")
+            pipeline.fit(X_train, y_train)
+
         fitted[key] = pipeline
         joblib.dump(pipeline, MODELS_DIR / f"{key}.joblib")
         print(f"    Guardado - models/{key}.joblib")
@@ -222,17 +236,29 @@ def train_mental_health_models(df: pd.DataFrame) -> dict[str, Pipeline]:
     fitted = {}
     for model_name in ["logistic", "random_forest"]:
         key = f"classification_{model_name}_{target_col}"
+        grid_key = f"classification_{model_name}"
         print(f"\n  Entrenando {key} ...")
         pipeline = build_classification_pipeline(model_name, available_features, use_smote=True)
-        cv_scores = cross_validate_model(
-            pipeline, X_train, y_train, scoring=["f1", "roc_auc", "balanced_accuracy"]
-        )
-        print(f"    CV F1:                {cv_scores.get('test_f1_mean', float('nan')):.4f} "
-              f"± {cv_scores.get('test_f1_std', float('nan')):.4f}")
-        print(f"    CV ROC-AUC:           {cv_scores.get('test_roc_auc_mean', float('nan')):.4f} "
-              f"± {cv_scores.get('test_roc_auc_std', float('nan')):.4f}")
-        print(f"    CV Balanced Accuracy: {cv_scores.get('test_balanced_accuracy_mean', float('nan')):.4f}")
-        pipeline.fit(X_train, y_train)
+
+        param_grid = PARAM_GRIDS.get(grid_key, {})
+        if param_grid:
+            print(f"    Tuning hiperparámetros ({len(param_grid)} params)...")
+            search = tune_pipeline(
+                pipeline, param_grid, X_train, y_train,
+                search_type="grid", scoring="f1",
+            )
+            pipeline = search.best_estimator_
+        else:
+            cv_scores = cross_validate_model(
+                pipeline, X_train, y_train, scoring=["f1", "roc_auc", "balanced_accuracy"]
+            )
+            print(f"    CV F1:                {cv_scores.get('test_f1_mean', float('nan')):.4f} "
+                  f"± {cv_scores.get('test_f1_std', float('nan')):.4f}")
+            print(f"    CV ROC-AUC:           {cv_scores.get('test_roc_auc_mean', float('nan')):.4f} "
+                  f"± {cv_scores.get('test_roc_auc_std', float('nan')):.4f}")
+            print(f"    CV Balanced Accuracy: {cv_scores.get('test_balanced_accuracy_mean', float('nan')):.4f}")
+            pipeline.fit(X_train, y_train)
+
         fitted[key] = pipeline
         joblib.dump(pipeline, MODELS_DIR / f"{key}.joblib")
         print(f"    Guardado - models/{key}.joblib")
