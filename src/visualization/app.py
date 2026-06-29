@@ -1,5 +1,9 @@
 import json
+import sys
 from pathlib import Path
+
+# Ensure the project root is on sys.path (needed for Streamlit Cloud)
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import joblib
 import pandas as pd
