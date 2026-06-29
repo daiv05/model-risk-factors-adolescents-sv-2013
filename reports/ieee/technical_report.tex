@@ -42,13 +42,11 @@
 \section{Introducción}
 % ============================================================
 
-La salud de los adolescentes representa uno de los desafíos más urgentes para los sistemas de salud de países en desarrollo. En El Salvador, los jóvenes de entre 13 y 17 años enfrentan exposición temprana a factores de riesgo conductuales ---consumo de sustancias, violencia escolar, sedentarismo--- que se asocian con consecuencias graves en la salud adulta. La detección temprana de estos riesgos es una prioridad de la agenda de salud pública, pero los recursos disponibles para tamizaje individual son limitados.
+La salud de los adolescentes representa uno de los desafíos más urgentes para los sistemas de salud de países en desarrollo. En El Salvador, los jóvenes de entre 13 y 17 años enfrentan exposición temprana a factores de riesgo conductuales ---consumo de sustancias, violencia escolar, sedentarismo--- que se asocian con consecuencias graves en la salud adulta. La detección temprana de estos riesgos es una prioridad de la agenda de salud pública.
 
 La Organización Mundial de la Salud desarrolló el Global School-based Student Health Survey (GSHS) precisamente para medir estos factores de riesgo a escala poblacional \cite{who_gshs_2013}. Los datos del GSHS 2013 para El Salvador constituyen la fuente pública más reciente disponible para el país y ofrecen una oportunidad única para construir modelos predictivos que apoyen la toma de decisiones en políticas de salud.
 
-Este artículo propone un sistema de aprendizaje automático que opera sobre dichos datos con dos objetivos diferenciados: (1) predecir el Índice de Masa Corporal (IMC) a partir de hábitos de alimentación y actividad física, y (2) identificar estudiantes con riesgo de salud mental ---específicamente suicidalidad--- a partir de factores psicosociales y conductuales. El sistema no está diseñado como herramienta de diagnóstico clínico individual, sino como instrumento de vigilancia epidemiológica que permita priorizar la intervención en grupos de riesgo a escala departamental o nacional.
-
-Las contribuciones principales de este trabajo son: (a) un análisis riguroso de los predictores de riesgo en la muestra salvadoreña, (b) la cuantificación mediante ablación del aporte individual de cada dominio de variables, y (c) una evaluación honesta de las limitaciones del sistema, incluyendo el fracaso del modelo de regresión del IMC, cuyo resultado negativo es en sí mismo un hallazgo relevante para la política pública.
+Este artículo propone un sistema de aprendizaje automático que opera sobre dichos datos con dos objetivos diferenciados: (1) predecir el Índice de Masa Corporal (IMC) a partir de hábitos de alimentación y actividad física, y (2) identificar estudiantes con riesgo de salud mental ---específicamente suicidalidad--- a partir de factores psicosociales y conductuales. El sistema no está diseñado como herramienta de diagnóstico clínico individual, sino como instrumento de vigilancia epidemiológica que permita priorizar la intervención en grupos de riesgo.
 
 % ============================================================
 \section{Descripción del Dataset}
@@ -56,12 +54,12 @@ Las contribuciones principales de este trabajo son: (a) un análisis riguroso de
 
 \subsection{El GSHS 2013 de El Salvador}
 
-El GSHS es una encuesta estandarizada desarrollada por la OMS que mide factores de riesgo conductuales y factores de protección en diez áreas clave entre estudiantes de 13 a 17 años \cite{who_gshs_2013}. La edición 2013 para El Salvador recopiló 52 preguntas (identificadas como Q1–Q58, omitiendo Q28–Q33), codificadas con valores ordinales politómicos.
+El GSHS es una encuesta estandarizada desarrollada por la OMS que mide factores de riesgo conductuales y factores de protección en diez áreas clave entre estudiantes de 13 a 17 años \cite{who_gshs_2013}. La edición 2013 para El Salvador recopiló 52 preguntas (identificadas como Q1-Q58, omitiendo Q28-Q33), codificadas con valores ordinales politómicos (por ejemplo, ``Nunca'', ``A veces'', ``Frecuentemente'').
 
 El dataset incluye tres capas de variables:
 \begin{enumerate}
-  \item \textbf{Preguntas originales} Q1–Q58: respuestas ordinales que capturan frecuencias, cantidades o categorías.
-  \item \textbf{Variantes dicotómicas} QN: binarizaciones de las preguntas Q, donde el valor 1 indica ``Sí'' y 2 indica ``No'', basadas en umbrales clínicos validados por la OMS. Cubren los rangos Q6–Q27, Q34–Q40 y Q44–Q58.
+  \item \textbf{Preguntas originales} Q1-Q58: respuestas ordinales que capturan frecuencias, cantidades o categorías.
+  \item \textbf{Variantes dicotómicas} QN: binarizaciones de las preguntas Q, donde el valor 1 indica ``Sí'' y 2 indica ``No''. Cubren los rangos Q6-Q27, Q34-Q40 y Q44-Q58.
   \item \textbf{Indicadores derivados}: once variables calculadas sobre la encuesta, incluyendo indicadores de obesidad, sobrepeso y actividad física.
 \end{enumerate}
 
@@ -69,7 +67,7 @@ En total, el conjunto de datos contiene 104 variables. Un detalle técnico crít
 
 \subsection{Variables Excluidas}
 
-El análisis de valores faltantes reveló que ciertas columnas QN son submuestras condicionales (aplican solo a quienes respondieron afirmativamente a una pregunta previa), presentando más del 65\% de datos ausentes: \texttt{QN18}, \texttt{QN19}, \texttt{QN21}, \texttt{QN34}, \texttt{QN36}, \texttt{QN37}, \texttt{QN40}, \texttt{QN45}, \texttt{QN47}, \texttt{QN48}, \texttt{qnc1g} y \texttt{qnc2g}. Incluir estas variables introduciría más ruido que señal y violaría la interpretabilidad de los coeficientes del modelo.
+El análisis de valores faltantes reveló que ciertas columnas QN son submuestras condicionales (aplican solo a quienes respondieron afirmativamente a una pregunta previa), presentando más del 65\% de datos ausentes: \texttt{QN18}, \texttt{QN19}, \texttt{QN21}, \texttt{QN34}, \texttt{QN36}, \texttt{QN37}, \texttt{QN40}, \texttt{QN45}, \texttt{QN47}, \texttt{QN48}, \texttt{qnc1g} y \texttt{qnc2g}. Incluir estas variables introduciría más ruido que señal.
 
 \subsection{Selección de Familias de Variables por Modelo}
 
@@ -77,7 +75,7 @@ Dado que las columnas Q y QN del mismo dominio están casi perfectamente correla
 
 \begin{itemize}
   \item \textbf{Regresión (IMC)}: variables Q ordinales, ya que la escala ordinal preserva información que la binarización pierde.
-  \item \textbf{Clasificación (salud mental)}: variables QN, que representan umbrales clínicos validados por la OMS donde la presencia/ausencia del comportamiento es la señal relevante.
+  \item \textbf{Clasificación (salud mental)}: variables QN, dónde la presencia/ausencia del comportamiento es la señal relevante.
 \end{itemize}
 
 Las variables demográficas Q1 (edad), Q2 (sexo) y Q3 (grado) se utilizaron en ambos modelos.
@@ -140,7 +138,7 @@ Para cuantificar la contribución de cada dominio de variables al desempeño del
 \section{Resultados}
 % ============================================================
 
-\subsection{Modelo de Predicción del IMC: Un Fracaso Informativo}
+\subsection{Modelo de Predicción del IMC}
 
 Las métricas sobre el conjunto de prueba se presentan en la Tabla~\ref{tab:regression}.
 
@@ -160,11 +158,11 @@ Las métricas sobre el conjunto de prueba se presentan en la Tabla~\ref{tab:regr
 
 Un $R^2$ negativo indica que el modelo predice \textit{peor} que usar siempre el IMC promedio de la muestra. El error absoluto medio de $\approx$3 puntos de IMC es elevado considerando que la desviación estándar del IMC en la muestra ronda los 4 puntos. La validación cruzada confirma el resultado: $R^2_{\text{CV}} = 0.003 \pm 0.032$ para la regresión lineal. Incluso con tuning de hiperparámetros, el Random Forest no mejora ($R^2 = -0.030$).
 
-Este resultado \textbf{no invalida el sistema}, sino que constituye en sí mismo un hallazgo relevante: los hábitos de alimentación, actividad física e higiene \textit{autorreportados} no contienen información suficiente para predecir el IMC de un adolescente. El IMC depende fuertemente de factores no capturados en la encuesta: genética, etapa de desarrollo puberal, composición corporal y el sesgo inherente al autorreporte de comportamientos. Desde la perspectiva de política pública, esto implica que los programas de prevención de obesidad no pueden sustituir la medición física directa del peso y la talla por encuestas conductuales.
+Los hábitos de alimentación, actividad física e higiene \textit{autorreportados} no contienen información suficiente para predecir el IMC de un adolescente. El IMC depende fuertemente de factores no capturados en la encuesta: genética, etapa de desarrollo puberal, composición corporal y el sesgo inherente al autorreporte de comportamientos. Desde la perspectiva de política pública, esto implica que los programas de prevención de obesidad no pueden sustituir la medición física directa del peso y la talla por encuestas conductuales.
 
 \subsection{Modelo de Clasificación del Riesgo de Salud Mental}
 
-Los resultados del clasificador, presentados en la Tabla~\ref{tab:classification}, contrastan favorablemente con los del regresor.
+Los resultados del clasificador, se presentan en la Tabla~\ref{tab:classification}.
 
 \begin{table}[ht]
   \caption{Desempeño de los modelos de clasificación de riesgo de salud mental}
@@ -201,7 +199,7 @@ La Fig.~\ref{fig:confusion} muestra la matriz de confusión normalizada del mode
 
 \subsection{Análisis de Ablación: ¿Qué Variables Importan?}
 
-La Tabla~\ref{tab:ablation} presenta los resultados del análisis de ablación \textit{leave-one-group-out} partiendo de un F1 base de 0.498. Nota: este análisis usa validación cruzada de 5 folds sobre el dataset completo, por lo que los F1 no son directamente comparables con los del test set de la Tabla~\ref{tab:classification}.
+La Tabla~\ref{tab:ablation} presenta los resultados del análisis de ablación \textit{leave-one-group-out} partiendo de un F1 base de 0.498.
 
 \begin{table}[ht]
   \caption{Análisis de ablación por grupos de variables (F1 clase en riesgo)}
@@ -223,7 +221,7 @@ La Tabla~\ref{tab:ablation} presenta los resultados del análisis de ablación \
   \end{tabular}
 \end{table}
 
-El resultado más claro: el grupo \textbf{afectivo} ---que incluye la frecuencia con que el estudiante se siente solo y la presencia de insomnio por preocupación--- es con diferencia el dominio más valioso. Su eliminación produce una caída de 0.054 puntos de F1, más del doble del impacto de cualquier otro grupo. El consumo de sustancias ocupa el segundo lugar ($\Delta = -0.019$). Sorprendentemente, retirar las variables de actividad física o apoyo social \textit{mejora} ligeramente el modelo, lo que sugiere que estos dominios aportan ruido en lugar de señal cuando el objetivo es predecir riesgo suicida.
+El grupo \textbf{afectivo} ---que incluye la frecuencia con que el estudiante se siente solo y la presencia de insomnio por preocupación--- es con diferencia el dominio más valioso. Su eliminación produce una caída de 0.054 puntos de F1, más del doble del impacto de cualquier otro grupo. El consumo de sustancias ocupa el segundo lugar ($\Delta = -0.019$). Sorprendentemente, retirar las variables de actividad física o apoyo social \textit{mejora} ligeramente el modelo, lo que sugiere que estos dominios aportan ruido en lugar de señal cuando el objetivo es predecir riesgo suicida.
 
 % ============================================================
 \section{Sistema Propuesto y Valor para la Política Pública}
@@ -239,11 +237,11 @@ El sistema propuesto opera en tres etapas:
   \item \textbf{Derivación}: los estudiantes clasificados como en riesgo son derivados a un protocolo de evaluación por personal de salud mental, no tratados directamente por el modelo.
 \end{enumerate}
 
-Este diseño respeta un principio fundamental: \textbf{el modelo es una herramienta de priorización poblacional, no un sustituto del diagnóstico clínico}. Su valor reside en identificar qué grupos y regiones requieren mayor atención, no en diagnosticar a individuos.
+Este diseño respeta un principio fundamental: \textbf{el modelo es una herramienta de priorización, no un sustituto del diagnóstico clínico}.
 
 \subsection{Capacidad de Detección a Escala}
 
-Con un AUC-ROC de 0.808, el clasificador logra una separación significativamente mejor que el azar (0.50). A modo ilustrativo: si El Salvador tiene aproximadamente 350,000 estudiantes en centros públicos de bachillerato, y la prevalencia de suicidalidad en la muestra GSHS es de $\approx$17\%, el modelo permitiría enfocar los recursos de tamizaje especializado en el subconjunto de mayor riesgo predicho, reduciendo la carga de evaluación clínica completa mientras aumenta la cobertura efectiva.
+Con un AUC-ROC de 0.808, el clasificador logra una separación significativamente mejor que el azar (0.50). A modo ilustrativo: si El Salvador tiene aproximadamente 350,000 estudiantes en centros públicos de bachillerato, y la prevalencia de suicidalidad en la muestra GSHS es de $\approx$17\%, el modelo permitiría enfocar los recursos de tamizaje especializado en el subconjunto de mayor riesgo predecido por el modelo, reduciendo la carga de evaluación clínica completa mientras se logre aumentar la cobertura efectiva.
 
 % ============================================================
 \section{Limitaciones}
@@ -256,21 +254,21 @@ Las siguientes limitaciones deben ser consideradas antes de implementar el siste
   \item \textbf{Sesgo de autorreporte}: los adolescentes pueden subinformar comportamientos estigmatizados (consumo de sustancias, ideación suicida) o sobreinformar comportamientos deseables (actividad física). Este sesgo afecta directamente a los modelos entrenados sobre estos datos.
   \item \textbf{Cobertura}: la muestra GSHS es escolar. Los adolescentes fuera del sistema educativo ---frecuentemente los más vulnerables--- no están representados.
   \item \textbf{Modelo de IMC inutilizable}: con $R^2 \leq 0$ incluso después de tuning de hiperparámetros, el componente de regresión del IMC no debe emplearse para ninguna decisión clínica o de política.
-  \item \textbf{Tasa de falsos negativos del clasificador}: el recall de 0.623 sobre la clase en riesgo implica que aproximadamente el 38\% de los estudiantes en riesgo no son detectados. Esta tasa es inaceptable para uso clínico individual, pero puede ser aceptable en un sistema de vigilancia poblacional donde el objetivo es reducir la brecha de atención, no garantizar cobertura perfecta.
+  \item \textbf{Tasa de falsos negativos del clasificador}: el recall de 0.623 sobre la clase en riesgo implica que aproximadamente el 38\% de los estudiantes en riesgo no son detectados. Esta tasa es inaceptable para uso clínico individual, pero puede ser aceptable en un sistema de vigilancia poblacional donde el objetivo es reducir la brecha de atención, y no tanto el garantizar una cobertura perfecta.
 \end{itemize}
 
 % ============================================================
 \section{Conclusiones y Recomendaciones}
 % ============================================================
 
-Este trabajo presenta evidencia empírica sobre los principales factores predictores de riesgo en adolescentes salvadoreños a partir del GSHS 2013. Los hallazgos más relevantes para la toma de decisiones en salud pública son:
+Los hallazgos más relevantes para la toma de decisiones en salud pública son:
 
 \begin{enumerate}
   \item \textbf{Los síntomas afectivos son la señal más potente}: sentirse solo con frecuencia y presentar insomnio por preocupación predicen riesgo suicida con mayor fuerza que cualquier otro dominio medido. Las intervenciones que fortalezcan la salud emocional y los vínculos sociales tienen el mayor potencial de impacto.
-  \item \textbf{El consumo de sustancias es el segundo factor modificable clave}: alcohol y drogas aparecen como co-predictores significativos. Los programas de prevención del uso de sustancias en escuelas tienen justificación empírica en esta muestra.
-  \item \textbf{El IMC no es predecible desde encuestas conductuales}: invertir en programas de nutrición basados exclusivamente en autorreporte de comportamientos sería insuficiente; se requieren mediciones antropométricas directas en las escuelas.
-  \item \textbf{La actualización de datos es la prioridad máxima}: ningún modelo entrenado sobre datos de 2013 puede sustituir una nueva ronda de encuesta GSHS. Se recomienda al Ministerio de Salud gestionar con la OMS la realización de un nuevo GSHS para El Salvador.
-  \item \textbf{El sistema propuesto puede operar como herramienta de vigilancia epidemiológica}: el clasificador de salud mental (AUC-ROC = 0.808, recall = 0.623) tiene capacidad suficiente para priorizar grupos de riesgo a escala departamental si se integra en una encuesta escolar anual.
+  \item \textbf{El consumo de sustancias es el segundo factor modificable clave}: alcohol y drogas aparecen como co-predictores significativos. Los programas de prevención del uso de sustancias en escuelas deben ser parte integral de cualquier estrategia de salud mental.
+  \item \textbf{El IMC no es predecible desde encuestas conductuales}: invertir en programas de nutrición basados exclusivamente en autorreporte de comportamientos sería insuficiente, se requieren mediciones directas de peso y talla.
+  \item \textbf{La actualización de datos es la prioridad}: ningún modelo entrenado sobre datos de 2013 puede sustituir una nueva ronda de encuesta GSHS. Se recomienda al Ministerio de Salud gestionar con la OMS la realización de un nuevo GSHS para El Salvador.
+  \item \textbf{El sistema propuesto puede operar como herramienta de vigilancia epidemiológica}: el clasificador de salud mental (AUC-ROC = 0.808, recall = 0.623) tiene capacidad suficiente para priorizar grupos de riesgo a escala departamental si se integra, por ejemplo, en una encuesta escolar anual.
 \end{enumerate}
 
 \begin{thebibliography}{1}
